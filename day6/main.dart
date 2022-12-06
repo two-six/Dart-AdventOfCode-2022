@@ -2,7 +2,7 @@ import 'dart:io';
 import 'dart:async';
 
 Future<void> main() async {
-  String input = await File('bigboy.txt').readAsString();
+  String input = await File('input.txt').readAsString();
   int silver = 0, gold = 0;
   for (var i = 0, j = 0;;) {
     if (silver == 0) {
