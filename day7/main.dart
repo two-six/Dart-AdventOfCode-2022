@@ -1,37 +1,75 @@
 import 'dart:io';
 import 'dart:async';
 
+class Node {
+  String name = '';
+  int value = 0;
+  Node? parent = null;
+  Map<String, Node> children = {};
+
+  Node({String name = '', int value = 0, Node? parent = null}) {
+    this.name = name;
+    this.value = value;
+    this.parent = parent;
+  }
+  void addChild(String name, {int value = 0, Node? parent = null}) {
+    children.putIfAbsent(
+        name, () => Node(name: name, value: value, parent: parent));
+  }
+
+  int computeValue() {
+    int result = this.value;
+    this.children.values.forEach((child) => result += child.computeValue());
+    return result;
+  }
+
+  void computeAllValues() {
+    this.value = this.computeValue();
+    this.children.values.forEach((child) => child.computeAllValues());
+  }
+
+  @override
+  String toString() {
+    String result = '${this.name} - ${this.value}\n';
+    children.values.forEach((child) => result += child.toString());
+    return result;
+  }
+}
+
 Future<void> main() async {
   String input = await File('input.txt').readAsString();
-  print(solution(input));
+  Node tree = parseFiles(input);
+  print('Silver: ${silver(tree)}');
+  print('Gold: ${gold(tree)}');
 }
 
-Map<String, int> solution(String input) {
-  Map<String, int> files = parseFiles(input);
-  int silver = 0;
-  files.values.forEach((size) {
-    if (size <= 100000) silver += size;
+int silver(Node tree) {
+  int result = tree.value <= 100000 ? tree.value : 0;
+  tree.children.values.forEach((child) {
+    result += silver(child);
   });
-
-  int gold = 0;
-  int needed = 30000000 - (70000000 - files['/']!);
-  var directories = files.keys.toList();
-  directories.sort((a, b) => files[b]!.compareTo(files[a]!));
-  for (var i = 0; i < 20; i++) {
-    if (files[directories[i]]! < needed) {
-      gold = files[directories[i - 1]]!;
-      break;
-    }
-  }
-  return {
-    'Silver': silver,
-    'Gold': gold,
-  };
+  return result;
 }
 
-Map<String, int> parseFiles(String input) {
-  Map<String, int> files = {'/': 0};
-  String currentDir = '/';
+int gold(Node tree) {
+  int needed = -(70000000 - tree.value - 30000000);
+  List<int> result = goldCompute(tree, needed);
+  result.sort();
+  return result.first;
+}
+
+List<int> goldCompute(Node tree, int needed) {
+  List<int> result = [];
+  if (tree.value >= needed) {
+    result.add(tree.value);
+    tree.children.values
+        .forEach((child) => result += goldCompute(child, needed));
+  }
+  return result;
+}
+
+Node parseFiles(String input) {
+  Node tree = Node(name: '/', value: 0);
   RegExp regex = RegExp(r'(.+?) (.+)');
   String commands = input.replaceAll('\$ ', '');
   regex.allMatches(commands).forEach((line) {
@@ -40,39 +78,35 @@ Map<String, int> parseFiles(String input) {
     switch (command) {
       case 'cd':
         {
-          if (value[0] == '/') {
-            currentDir = value;
-          } else if (value == '..') {
-            currentDir = currentDir.substring(0, currentDir.length - 1);
-            currentDir =
-                currentDir.substring(0, currentDir.lastIndexOf('/') + 1);
-          } else
-            currentDir += value + '/';
+          if (value[0] == '/')
+            tree.name = '/';
+          else if (value == '..')
+            tree = tree.parent!;
+          else {
+            tree.addChild(tree.name + value + '/', parent: tree);
+            tree = tree.children[tree.name + value + '/']!;
+          }
         }
         break;
       case 'dir':
         {
-          files.putIfAbsent(currentDir + value + '/', () => 0);
+          tree.addChild(tree.name + value + '/', parent: tree);
         }
         break;
       default:
         {
-          files[currentDir] = files[currentDir]! + int.parse(command);
+          tree.value += int.parse(command);
         }
     }
   });
-  List<String> directoriesSortedInc = files.keys.toList();
-  directoriesSortedInc.sort((a, b) => a.length.compareTo(b.length));
-  var directoriesSortedDesc = directoriesSortedInc.reversed;
-  for (var key in directoriesSortedInc) {
-    for (var keyInside in directoriesSortedDesc) {
-      if (keyInside.length > key.length &&
-          keyInside.substring(0, key.length) == key &&
-          keyInside != key) {
-        files[key] = files[key]! + files[keyInside]!;
-      }
-      if (keyInside.length < key.length) break;
-    }
+  for (;;) {
+    if (tree.parent != null)
+      tree = tree.parent!;
+    else
+      break;
   }
-  return files;
+
+  tree.computeAllValues();
+
+  return tree;
 }
