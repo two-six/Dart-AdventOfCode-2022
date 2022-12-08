@@ -10,10 +10,12 @@ const List<List<int>> directions = [
 
 Future<void> main() async {
   String input = await File('input.txt').readAsString();
+
   List<List<int>> trees = input
       .split('\n')
       .map((line) => line.split('').map((tree) => int.parse(tree)).toList())
       .toList();
+
   trees.removeWhere((line) => line.length == 0);
   int silver = 0;
   int gold = 0;
