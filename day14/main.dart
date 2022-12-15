@@ -53,14 +53,15 @@ Map<String, int> solution(Set<Point> scan) {
     Point sand = Point(500, 0);
     if (scan.contains(Point(500, 0))) return {'Silver': silver, 'Gold': i};
     while (true) {
-      if (silver == 0 && sand.y > floorY - 2) silver = i;
       Point left = sand + Point(-1, 1);
       Point right = sand + Point(1, 1);
       Point down = sand + Point(0, 1);
       if (down.y == floorY) {
+        if (silver == 0) silver = i;
         scan.add(sand);
         break;
-      } else if (scan.contains(down)) {
+      }
+      if (scan.contains(down)) {
         if (scan.contains(left)) {
           if (scan.contains(right)) {
             scan.add(sand);
